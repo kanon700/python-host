@@ -26,10 +26,12 @@ class Scanner(object):
 
 class Driver(object):
     handle = 0x16
+    notif_handle = 0x13
     commands = {
-        'press' : '\x57\x01\x00',
-        'on'    : '\x57\x01\x01',
-        'off'   : '\x57\x01\x02',
+        'press'     : '\x57\x01\x00',
+        'on'        : '\x57\x01\x01',
+        'off'       : '\x57\x01\x02',
+        'settings'  : '\x57\x02',
     }
 
     def __init__(self, device, bt_interface=None, timeout_secs=None):
@@ -55,6 +57,21 @@ class Driver(object):
     def run_command(self, command):
         return self.req.write_by_handle(self.handle, self.commands[command])
 
+    def run_and_res_command(self, command):
+        self.req.write_by_handle(self.handle, self.commands[command])
+        return self.req.read_by_handle(self.notif_handle)
+
+    def get_settings_value(self, value):
+        value = struct.unpack('B' * len(value[0]), value[0])
+        settings = {}
+        settings["battery"] = value[1]
+        settings["firmware"] = value[2] / 10.0
+        settings["n_timers"] = value[8]
+        settings["dual_state_mode"] = bool(value[9] & 16)
+        settings["inverse_direction"] = bool(value[9] & 1)
+        settings["hold_seconds"] = value[10]
+
+        return settings
 
 def main():
     parser = argparse.ArgumentParser()
